@@ -18,14 +18,23 @@
 
 let screen_w = 800;
 let screen_h = 600;
+let scroll_speed = 5;
+
+let p_speed = 6;
+let tile_size = 20;
 
 let enemy_num = 6;
 let enemies = [];
 let bullet_num = 3;
 let bullets = [];
 
+let bullet_counter = 0;
+
 let cursors;
 let keycode_space;
+
+
+
 
 let config = {
 	width: screen_w,
@@ -46,58 +55,133 @@ let config = {
 let game = new Phaser.Game(config);
 
 function preload(){
+
+
+//LOAD IMG
 	this.load.image('bg', '/bg.png');
-	this.load.spritesheet('enemy','/enemigo.png', {frameWidth: 16, frameHeight: 16});
-	this.load.spritesheet('player', '/spaceship.png', {frameWidth: 16, frameHeight:16});
+	this.load.spritesheet('enemy_spr','/enemigo.png', {frameWidth: 16, frameHeight: 16});
+	this.load.spritesheet('player_spr', '/spaceship.png', {frameWidth: 16, frameHeight:16});
 	this.load.image('bullet', '/bullet.png');
 
-cursors = this.input.keyboard.createCursorKeys();
-keycode_space = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-console.log(keycode_space);
+
+
+//LOAD CONTROLS
+	cursors = this.input.keyboard.createCursorKeys();
+	
+	keycode_space = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+
+
+
+
+
 }
 
 function create(){
-	bg = this.add.image(400,300,'bg');
+
+
+//BACKGROUND
+	bg = this.add.image(0,300,'bg');
+
+	bg2 = this.add.image(0,300,'bg');
+
+	bg.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+	bg2.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+//ANIMATIONS
+
+	this.anims.create({
+		key:"moving",
+		frames: this.anims.generateFrameNumbers('player_spr', {frames:[0,1,2,3]}),
+		frameRate: 8,
+		repeat: -1});
+
+	this.anims.create({
+		key:"e_moving",
+		frames: this.anims.generateFrameNumbers('enemy_spr', {frames:[0,1,2,3]}),
+		frameRate: 8,
+		repeat: -1});
+
+
+	player = this.add.sprite(60,screen_h/2);
 	
-	player = this.add.image(100,screen_h/2, 'player');
-	player.setScale(3);	
+	player.anims.play('moving');
 	player.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
 	
+	this.physics.add.existing(player, false);
+
+player.setScale(3);	
 
 
 
 	for (let i = 0; i < enemy_num; i++) 
 	{
 
-	enemy_u = this.add.image(screen_w +16,(50*i)+100, 'enemy');
+	enemy_u = this.add.sprite(16,(50*i)+100);
+	enemy_u.anims.play('e_moving');
 	enemy_u.setScale(3);
-	enemy_u.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
 	enemies.push(enemy_u);
 
 	}
 	for (let i = 0; i < bullet_num; i++)
 	{
 	
-bullet_u = this.add.image(screen_w +16,(50*i)+50, 'bullet');
+
+	bullet_u = this.add.image(screen_w +16,(50*i)+50, 'bullet');
 	bullet_u.setScale(3);
 	bullet_u.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
 
 
 	bullets.push(bullet_u);
 	}
-console.log( cursors.down);
+	bg.setDisplaySize(1600,600);
+	bg2.setDisplaySize(1600,600);
+
+bg.x=0;
+bg2.x= bg.displayWidth;
+
 }
 
 function update(){
+//scrollingBG
 
-if (cursors.down.isDown){player.y += 10;}
+	bg.x -= scroll_speed;
+	bg2.x -= scroll_speed;
+	
+	if (bg.x + bg.displayWidth ==  screen_w *2){bg2.x = screen_w*2;}
+	if (bg2.x + bg2.displayWidth == screen_w*2) {bg.x = screen_w*2;}
+	
+	
 
 
-
-if (cursors.up.isDown){player.y -= 10;}
+//player controls
+if (cursors.down.isDown && player.y+tile_size <=screen_h ){player.y += p_speed ; 
 }
 
 
+if (cursors.up.isDown && player.y >= tile_size){player.y -= p_speed ;
+}
+
+if (Phaser.Input.Keyboard.JustDown(keycode_space)) {
+
+bullets[bullet_counter].x = player.x;
+bullets[bullet_counter].y = player.y;
+bullet_counter++;
+if (bullet_counter == bullet_num){
+bullet_counter = 0;
+console.log(keycode_space._events);
+}
+}
+
+for(let i = 0; i < bullet_num; i++){
+if ((bullets[i].x < screen_w + 40 && bullets[i].x > 0) &&(bullets[i].y > 0 && bullets[i].y < screen_h ) )
+{
+bullets[i].x += p_speed;
+}
+}
+
+
+
+}
 </script>
  
 
