@@ -119,6 +119,15 @@ player.setScale(3);
 	enemy_u = this.add.sprite(16,(50*i)+100);
 	enemy_u.anims.play('e_moving');
 	enemy_u.setScale(3);
+	
+	this.physics.add.existing(enemy_u, false);
+	enemy_u.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+
+	this.physics.add.collider(player,enemy_u, (player,enemy_u) =>{
+	console.log("man dao");
+ 	respawnEnemy(enemy_u); 	
+	});
+	
 	enemies.push(enemy_u);
 
 	}
@@ -130,7 +139,14 @@ player.setScale(3);
 	bullet_u.setScale(3);
 	bullet_u.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
 
-
+	this.physics.add.existing(bullet_u, false);
+	
+	for (let x = 0; x < enemy_num; x++){
+	{this.physics.add.collider(bullet_u ,enemies[x], (bullet_u,enemies[x]) =>{
+	
+ 	respawnEnemy(enemy_u); 	
+	});
+	}
 	bullets.push(bullet_u);
 	}
 	bg.setDisplaySize(1600,600);
@@ -161,14 +177,14 @@ if (cursors.down.isDown && player.y+tile_size <=screen_h ){player.y += p_speed ;
 if (cursors.up.isDown && player.y >= tile_size){player.y -= p_speed ;
 }
 
-if (Phaser.Input.Keyboard.JustDown(keycode_space)) {
+if (Phaser.Input.Keyboard.JustDown(keycode_space) && (bullets[bullet_counter].x > screen_w )) {
 
-bullets[bullet_counter].x = player.x;
-bullets[bullet_counter].y = player.y;
-bullet_counter++;
+	bullets[bullet_counter].x = player.x;
+	bullets[bullet_counter].y = player.y;
+	bullet_counter++;
 if (bullet_counter == bullet_num){
-bullet_counter = 0;
-console.log(keycode_space._events);
+	bullet_counter = 0;
+	
 }
 }
 
@@ -179,9 +195,31 @@ bullets[i].x += p_speed;
 }
 }
 
+//Enemy Controller
 
+for (let i = 0; i< enemy_num; i++){
+
+enemies[i].x +=  -8;
+console.log(enemies[i].x, enemies[i].y)
+if (enemies[i].x < -100){
+respawnEnemy(enemies[i]);
+}
+}
 
 }
+
+function respawnEnemy(_enemy)
+{
+
+let n_pos = Math.floor(Math.random() * 500)+50;
+
+_enemy.y = n_pos;
+_enemy.x = screen_w +40;
+
+}
+
+
+
 </script>
  
 
