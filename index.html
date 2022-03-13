@@ -23,18 +23,35 @@ let scroll_speed = 5;
 let p_speed = 6;
 let tile_size = 20;
 
-let enemy_num = 6;
+let enemy_num = 5;
 let enemies = [];
+let enemy_speed = 4;
+
+
 let bullet_num = 3;
 let bullets = [];
 
+
+let current_bullet = 0;
 let bullet_counter = 0;
 
+let bullet_buffer_pos = 30;
+let onBuffer = [true,true,true];
 let cursors;
 let keycode_space;
 
+let score = 0;
+let score_txt = "";
+let lives = 3;
+let lives_txt = ""; 
+let gameOver_txt = "";
+let GO_score = "";
+let GO_score_txt = "";
 
+let m_gameOver = false;
 
+let timer_count = 0;
+let time_to_reset = 5000;
 
 let config = {
 	width: screen_w,
@@ -79,7 +96,6 @@ function preload(){
 
 function create(){
 
-
 //BACKGROUND
 	bg = this.add.image(0,300,'bg');
 
@@ -111,12 +127,14 @@ function create(){
 
 player.setScale(3);	
 
+console.log(player);
 
+//ENEMIES
 
 	for (let i = 0; i < enemy_num; i++) 
 	{
 
-	enemy_u = this.add.sprite(16,(50*i)+100);
+	enemy_u = this.add.sprite(Math.floor(Math.random()* screen_w)+screen_w,Math.floor(Math.random() *550)+25 );
 	enemy_u.anims.play('e_moving');
 	enemy_u.setScale(3);
 	
@@ -124,37 +142,59 @@ player.setScale(3);
 	enemy_u.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
 
 	this.physics.add.collider(player,enemy_u, (player,enemy_u) =>{
-	console.log("man dao");
- 	respawnEnemy(enemy_u); 	
+
+if (m_gameOver == false){
+	loseLive();
+	hitOnPlayer();		
+	 }
 	});
 	
 	enemies.push(enemy_u);
 
 	}
+
+
+//BULLETS	
 	for (let i = 0; i < bullet_num; i++)
 	{
 	
 
-	bullet_u = this.add.image(screen_w +16,(50*i)+50, 'bullet');
-	bullet_u.setScale(3);
-	bullet_u.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+		bullet_u = this.add.image(bullet_buffer_pos*i +30, bullet_buffer_pos, 'bullet');
+		bullet_u.setScale(3);
+		bullet_u.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
 
-	this.physics.add.existing(bullet_u, false);
+		this.physics.add.existing(bullet_u, false);
 	
-	for (let x = 0; x < enemy_num; x++){
-	{this.physics.add.collider(bullet_u ,enemies[x], (bullet_u,enemies[x]) =>{
-	
- 	respawnEnemy(enemy_u); 	
-	});
-	}
+		
 	bullets.push(bullet_u);
 	}
+
+
+//SET BG
 	bg.setDisplaySize(1600,600);
 	bg2.setDisplaySize(1600,600);
 
-bg.x=0;
+
 bg2.x= bg.displayWidth;
 
+
+
+// GAME TEXT
+
+ 	gameOver_txt = this.add.text(screen_w/6, screen_h/3,"GAME OVER").setFontSize(0);
+
+	this.add.text(2*(screen_w/3)-15, 32, "VIDAS: ").setFontSize(20);
+     lives_txt = this.add.text(2*(screen_w/3) + 64, 32, "3").setFontSize(20);
+	
+
+
+     this.add.text(2*(screen_w/3) + 113,32, "PUNTOS: ").setFontSize(20);
+     score_txt = this.add.text ( 2*(screen_w/3) + 200, 32, "0").setFontSize(20);
+
+	GO_score_txt  =	this.add.text(screen_w/3, screen_h/2,"Score: ").setFontSize(0);
+	
+	GO_score = this.add.text(screen_w/3 + 150, screen_h/2,score_txt.text).setFontSize(0);
+	
 }
 
 function update(){
@@ -169,7 +209,10 @@ function update(){
 	
 
 
+
 //player controls
+
+if (m_gameOver  == false){
 if (cursors.down.isDown && player.y+tile_size <=screen_h ){player.y += p_speed ; 
 }
 
@@ -177,47 +220,162 @@ if (cursors.down.isDown && player.y+tile_size <=screen_h ){player.y += p_speed ;
 if (cursors.up.isDown && player.y >= tile_size){player.y -= p_speed ;
 }
 
-if (Phaser.Input.Keyboard.JustDown(keycode_space) && (bullets[bullet_counter].x > screen_w )) {
+if ((Phaser.Input.Keyboard.JustDown(keycode_space)) && (onBuffer[bullet_counter] == true )) {
+shootBullet();
 
-	bullets[bullet_counter].x = player.x;
-	bullets[bullet_counter].y = player.y;
-	bullet_counter++;
-if (bullet_counter == bullet_num){
-	bullet_counter = 0;
-	
 }
 }
+
+//BULLETS
+
 
 for(let i = 0; i < bullet_num; i++){
-if ((bullets[i].x < screen_w + 40 && bullets[i].x > 0) &&(bullets[i].y > 0 && bullets[i].y < screen_h ) )
-{
-bullets[i].x += p_speed;
+
+if (onBuffer[i] == false)
+	{
+	bullets[i].x += p_speed;
+	}
+
+if (bullets[i].x > screen_w  ){
+returnBullet(i)
+} 
+
 }
-}
+
 
 //Enemy Controller
 
 for (let i = 0; i< enemy_num; i++){
 
-enemies[i].x +=  -8;
-console.log(enemies[i].x, enemies[i].y)
+enemies[i].x -=  enemy_speed;
+enemies[i].y += 2*Math.sin((this.time.now/10 ) *(Phaser.Math.PI2/180   )); 
 if (enemies[i].x < -100){
+
 respawnEnemy(enemies[i]);
+loseLive();
+}
+
+//BULLET - ENEMY COLLISION
+this.physics.collide(bullets[current_bullet], enemies[i], function(){
+
+score +=100;
+
+score_txt.text = score.toString();
+
+respawnEnemy(enemies[i]);
+returnBullet(current_bullet);
+
+
+});
+
+}
+if (m_gameOver == true){
+
+
+gameOver();
+timerToRestart(this.physics.world._frameTimeMS);
+
 }
 }
 
+function restart(){
+
+	timer_count = 0;
+
+	hitOnPlayer();
+	score = 0;
+	score_txt.text = score.toString();
+	lives = 3;
+	lives_txt.text = score.toString();
+	GO_score.setFontSize(0);
+	GO_score_txt.setFontSize(0);
+	gameOver_txt.setFontSize(0);
+	player.visible = true;
+	m_gameOver = false;
+	
 }
+function timerToRestart(delta){
+	
+	if (timer_count >= time_to_reset){
+	restart();
+
+	}else{timer_count += delta;}
+
+	console.log(timer_count);
+
+
+}
+
+
+function hitOnPlayer(){
+
+for (let i = 0; i < enemy_num; i++){
+respawnEnemy(enemies[i]);}
+respawnPlayer();
+}
+
+function respawnPlayer (){
+player.x = 60;
+player.y = screen_h/2;
+
+
+}
+
+function shootBullet(){	
+
+	onBuffer[bullet_counter] = false;
+
+		bullets[bullet_counter].x = player.x;
+		bullets[bullet_counter].y = player.y;
+		current_bullet = bullet_counter;
+		bullet_counter++;
+
+	if (bullet_counter == bullet_num){
+		bullet_counter = 0;
+	
+	}
+
+
+}
+
+function gameOver(){
+	gameOver_txt.setFontSize(100);
+	GO_score.setFontSize(20);
+	GO_score_txt.setFontSize(20);
+	player.visible = false;
+	
+	 
+
+}
+
+function returnBullet(bullet){
+
+bullets[bullet].x = bullet_buffer_pos * bullet + 30;
+
+bullets[bullet].y = bullet_buffer_pos;
+onBuffer[bullet] = true
+
+
+}
+
+function loseLive(){
+
+	if (lives == 0){m_gameOver = true;
+	}
+	if (lives > 0){lives--;
+	}
+	lives_txt.text = lives.toString();
+ }
+
 
 function respawnEnemy(_enemy)
 {
 
-let n_pos = Math.floor(Math.random() * 500)+50;
+let n_pos = Math.floor(Math.random() *550)+25 
 
 _enemy.y = n_pos;
-_enemy.x = screen_w +40;
-
+_enemy.x = Math.floor(Math.random()* screen_w)+screen_w;
 }
-
 
 
 </script>
